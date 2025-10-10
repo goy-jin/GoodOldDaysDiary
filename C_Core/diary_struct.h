@@ -10,15 +10,20 @@
 #define DIARY_STRUCT_H
 
 // --- 常量定义 ---
-
 /** 日记内容的最大长度 (字节)。 */
 #define MAX_CONTENT_SIZE 4096
 
 /** 日记日期的长度：格式 YYYY-MM-DD + 终止符 '\0' = 11 字节。 */
 #define DATE_SIZE 11
 
+#define MAX_WEEKDAY_SIZE 10
+#define MAX_WEATHER_SIZE 32
+
 /** 存储图片路径的最大长度 (保留未来扩展用)。 */
 #define MAX_IMAGE_PATH_SIZE 256
+
+/** 密码的最大长度。 */
+#define MAX_PASSWORD_SIZE 32
 
 // --- 核心结构体 ---
 
@@ -27,16 +32,17 @@
  * @brief 表示单个日记条目的数据结构。
  * * 这个结构体用于二进制文件 I/O，确保数据大小固定且易于读写。
  */
-typedef struct {
-    // 日期 (例如: "2023-10-27")。
-    char date[DATE_SIZE];
+typedef struct DiaryEntry {
+
+    char date[DATE_SIZE]; // 日期 (例如: "2023-10-27")。
 
     // 日记内容的主体。
     char content[MAX_CONTENT_SIZE];
 
-    // [未来扩展] 用于保存图片文件的本地路径 (例如: "Data/images/20231027_001.jpg")。
+    char weekday[MAX_WEEKDAY_SIZE];// 星期几
+    char weather[MAX_WEATHER_SIZE]; // 天气情况
     char image_path[MAX_IMAGE_PATH_SIZE];
 
-} DiaryEntry;
+} DiaryEntry_t;
 
 #endif // DIARY_STRUCT_H

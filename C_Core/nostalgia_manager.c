@@ -56,7 +56,19 @@ int authenticate_password(const char* password)
     }
 }
 
-const char *chinese_weekdays[] = {
-    "星期日", "星期一", "星期二", "星期三",
-    "星期四", "星期五", "星期六"
-};  //指针数组
+
+static const char* chinese_weekdays[] = {
+    "星期日", "星期一", "星期二", "星期三","星期四", "星期五", "星期六"
+};
+int handle_save_command(const char* weather, const char* content) {
+    DiaryEntry_t  new_entry;
+    memset(&new_entry, 0,sizeof(DiaryEntry_t));
+
+}
+
+
+// --- 最小化主程序入口 (仅用于调试 handle_save_command) ---
+
+
+
+// 确保在其他地方注释或移除了你之前写的复杂 main 函数，以避免冲突。

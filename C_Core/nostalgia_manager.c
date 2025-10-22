@@ -51,7 +51,7 @@ int authenticate_password(const char* password)
       return EXIT_SUCCESS;
   }
     else {
-        printf("密码错误\n");
+        fprintf(stderr, "错误：密码错误，请重试。\n");
         return EXIT_FAILURE;
     }
 }
@@ -61,14 +61,65 @@ static const char* chinese_weekdays[] = {
     "星期日", "星期一", "星期二", "星期三","星期四", "星期五", "星期六"
 };
 int handle_save_command(const char* weather, const char* content) {
+    // 初始化一个新的日记条目，确保所有字段（尤其是字符串）安全清零。
     DiaryEntry_t  new_entry;
     memset(&new_entry, 0,sizeof(DiaryEntry_t));
+    time_t now = time(NULL); //获取原始时间
+    struct tm local_time_struct = *localtime(&now);//解指针.转换为本地时间
+    size_t len = strftime(
+            new_entry.date,          // 参数 1: 目标缓冲区 (char 数组)
+            DATE_SIZE,               // 参数 2: 目标缓冲区的最大容量 (11 字节)
+            "%Y-%m-%d",              // 参数 3: 格式字符串
+            &local_time_struct       // 参数 4: 源数据 (struct tm 结构的地址)
+        );
+    if (len == 0) {
+        fprintf(stderr,"Error: Failed to format date into YYYY-MM-DD.\n");
+        return EXIT_FAILURE;
+    }
 
+    const char* cn_day = chinese_weekdays[local_time_struct.tm_wday];//转成星期几
+    strncpy(new_entry.weekday, cn_day, MAX_WEEKDAY_SIZE - 1);// 关键修正：使用 strncpy 复制整个字符串
+
+    strncpy(new_entry.weather,weather,MAX_WEATHER_SIZE - 1);
+    strncpy(new_entry.content,content,MAX_CONTENT_SIZE - 1);
+
+    int save_status = write_entry_to_file(&new_entry);
+    if ( save_status != EXIT_SUCCESS ) {
+        return EXIT_FAILURE;
+    }
+    printf("日记保存成功！\n");
+    return EXIT_SUCCESS;
+}
+
+/**
+ * @brief 将单个日记条目以二进制形式写入数据文件。
+ * * @param entry 指向要写入文件的 DiaryEntry_t 结构体的指针。
+ * @return int 成功返回 EXIT_SUCCESS (0)，失败返回 EXIT_FAILURE (1)。
+ */
+static int write_entry_to_file(const DiaryEntry_t* entry) {
+    //  打开文件：使用 "ab" (追加二进制) 模式打开文件。
+    FILE* fp = fopen(DIARY_FILE_PATH, "ab");
+    // 检查文件是否打开成功。
+    if (fp == NULL) {
+        fprintf(stderr, "Error: Failed to open file %s\n", DIARY_FILE_PATH);
+    }
+    //写入数据：将 entry 结构体的全部内容作为一个块写入文件。
+    size_t items_written = fwrite(
+        entry,
+        sizeof(DiaryEntry_t),
+        1,
+        fp);
+    if (items_written != 1) {
+        fprintf(stderr, "Error: Failed to write to file %s\n", DIARY_FILE_PATH);
+        // 在返回失败之前，必须关闭文件句柄，避免资源泄露。
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+    // 关闭文件句柄并返回成功。
+    // 确保数据从缓冲区冲刷到硬盘，并释放资源。
+    fclose(fp);
+    return EXIT_SUCCESS;
 }
 
 
-// --- 最小化主程序入口 (仅用于调试 handle_save_command) ---
 
-
-
-// 确保在其他地方注释或移除了你之前写的复杂 main 函数，以避免冲突。

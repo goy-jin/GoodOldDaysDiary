@@ -1,159 +1,157 @@
 /**
 * @file nostalgia_manager.c
- * @brief æ ¸å¿ƒæ—¥è®°æ•°æ®ç®¡ç†å™¨ï¼šå®ç°æ•°æ®çš„äºŒè¿›åˆ¶å­˜å‚¨ã€æŸ¥æ‰¾å’Œå‘½ä»¤è¡Œäº¤äº’ã€‚
+ * @brief ºËĞÄÈÕ¼ÇÊı¾İ¹ÜÀíÆ÷£ºÊµÏÖÊı¾İµÄ¶ş½øÖÆ´æ´¢¡¢²éÕÒºÍÃüÁîĞĞ½»»¥¡£
  */
 
-#include <stdio.h>      // æ–‡ä»¶ I/O (fopen, fwrite, fread, fclose)
-#include <stdlib.h>     // æ ‡å‡†åº“å‡½æ•° (EXIT_SUCCESS, EXIT_FAILURE)
-#include <string.h>     // å­—ç¬¦ä¸²æ“ä½œ (strcmp, strncpy)
-#include <time.h>       // æ—¶é—´è·å– (time, localtime, strftime)
-#include <locale.h>     // æœ¬åœ°åŒ–è®¾ç½® (setlocale, å¸®åŠ©å¤„ç†ä¸­æ–‡ä¹±ç )
+#include <stdio.h>      // ÎÄ¼ş I/O (fopen, fwrite, fread, fclose)
+#include <stdlib.h>     // ±ê×¼¿âº¯Êı (EXIT_SUCCESS, EXIT_FAILURE)
+#include <string.h>     // ×Ö·û´®²Ù×÷ (strcmp, strncpy)
+#include <time.h>       // Ê±¼ä»ñÈ¡ (time, localtime, strftime)
+#include <locale.h>     // ±¾µØ»¯ÉèÖÃ (setlocale, °ïÖú´¦ÀíÖĞÎÄÂÒÂë)
 
-#include "diary_struct.h" // å¼•å…¥æˆ‘ä»¬å®šä¹‰çš„ç»“æ„ä½“å’Œå¸¸é‡
+#include "diary_struct.h" // ÒıÈëÎÒÃÇ¶¨ÒåµÄ½á¹¹ÌåºÍ³£Á¿
+#include <windows.h> // ±ØĞëÒıÈë
+#include <io.h>
+#include <fcntl.h>
 
-// --- å®å’Œå¸¸é‡å®šä¹‰ ---
-#define DIARY_FILE_PATH "Data/diary.dat" // æ•°æ®æ–‡ä»¶è·¯å¾„
-#define PASSWORD "123456"      // å¯†ç 
+// --- ºêºÍ³£Á¿¶¨Òå ---
+#define DIARY_FILE_PATH "Data/diary.dat" // Êı¾İÎÄ¼şÂ·¾¶
+#define PASSWORD "123456"      // ÃÜÂë
 
 
-// --- æ ¸å¿ƒå‡½æ•°å£°æ˜ (ç§æœ‰/å†…éƒ¨å®ç°) ---
+// --- ºËĞÄº¯ÊıÉùÃ÷ (Ë½ÓĞ/ÄÚ²¿ÊµÏÖ) ---
 static int write_entry_to_file(const DiaryEntry_t* entry);
 static void output_entry_to_stdout(const DiaryEntry_t* entry);
 
-// --- ä¸šåŠ¡é€»è¾‘å‡½æ•° (ä¾› main å‡½æ•°è°ƒç”¨) ---
+// --- ÒµÎñÂß¼­º¯Êı (¹© main º¯Êıµ÷ÓÃ) ---
 int authenticate_password(const char* password);
 int handle_save_command(const char* weather, const char* content);
 int handle_view_command(const char* date);
+// ·ÅÔÚÎÄ¼ş¶¥²¿£¬ÀıÈçÔÚÆäËûº¯ÊıÉùÃ÷µÄÅÔ±ß
+static void gbk_to_utf8_copy(const char *source_gbk, char *dest_utf8, size_t dest_size);
 
-
-
-// ç¡®ä¿åœ¨ main ä¹‹å‰è®¾ç½®æœ¬åœ°åŒ–ï¼Œä»¥æ­£ç¡®æ˜¾ç¤ºä¸­æ–‡
-void initialize_program() {
-    // è®¾ç½®æœ¬åœ°åŒ–ï¼Œä»¥ç¡®ä¿ä¸­æ–‡è¾“å‡ºæ­£å¸¸
-    setlocale(LC_ALL, "zh_CN.UTF-8");
-}
 
 int main(int argc, char *argv[]) {
-    // 1. åˆå§‹åŒ–ï¼ˆè®¾ç½®æœ¬åœ°åŒ–ï¼‰
-    initialize_program();
 
-    // 2. åˆ¤æ–­å‘½ä»¤æ¨¡å¼
+    // 2. ÅĞ¶ÏÃüÁîÄ£Ê½
 
-    // æ¨¡å¼ A: ç‹¬ç«‹è®¤è¯æ¨¡å¼ (argc == 2)
+    // Ä£Ê½ A: ¶ÀÁ¢ÈÏÖ¤Ä£Ê½ (argc == 2)
     if (argc == 2) {
-        printf("æ­£åœ¨å°è¯•ç‹¬ç«‹è®¤è¯...\n");
-        // argv[1] æ˜¯å¯†ç 
+        printf("ÕıÔÚ³¢ÊÔ¶ÀÁ¢ÈÏÖ¤...\n");
+        // argv[1] ÊÇÃÜÂë
         return authenticate_password(argv[1]);
 
-        // æ¨¡å¼ B: ä¿å­˜æ¨¡å¼ (argc == 5 ä¸” argv[1] == "save")
+        // Ä£Ê½ B: ±£´æÄ£Ê½ (argc == 5 ÇÒ argv[1] == "save")
     } else if (argc == 5 && strcmp(argv[1], "save") == 0) {
-        // å¯†ç ä½äº argv[2]
+        // ÃÜÂëÎ»ÓÚ argv[2]
         const char *password = argv[2];
         const char *weather = argv[3];
         const char *content = argv[4];
 
         if (authenticate_password(password) != EXIT_SUCCESS) {
-            fprintf(stderr, "æ“ä½œç»ˆæ­¢ï¼šå¯†ç è®¤è¯å¤±è´¥ã€‚\n");
+            fprintf(stderr, "²Ù×÷ÖÕÖ¹£ºÃÜÂëÈÏÖ¤Ê§°Ü¡£\n");
             return EXIT_FAILURE;
         }
 
-        printf("å¯†ç éªŒè¯æˆåŠŸï¼Œæ­£åœ¨ä¿å­˜æ—¥è®°...\n");
+        printf("ÃÜÂëÑéÖ¤³É¹¦£¬ÕıÔÚ±£´æÈÕ¼Ç...\n");
         return handle_save_command(weather, content);
 
-        // æ¨¡å¼ C: æŸ¥çœ‹æ¨¡å¼ (argc == 4 ä¸” argv[1] == "view")
+        // Ä£Ê½ C: ²é¿´Ä£Ê½ (argc == 4 ÇÒ argv[1] == "view")
     } else if (argc == 4 && strcmp(argv[1], "view") == 0) {
-        // å¯†ç ä½äº argv[2]
+        // ÃÜÂëÎ»ÓÚ argv[2]
         const char *password = argv[2];
         const char *date = argv[3];
 
         if (authenticate_password(password) != EXIT_SUCCESS) {
-            fprintf(stderr, "æ“ä½œç»ˆæ­¢ï¼šå¯†ç è®¤è¯å¤±è´¥ã€‚\n");
+            fprintf(stderr, "²Ù×÷ÖÕÖ¹£ºÃÜÂëÈÏÖ¤Ê§°Ü¡£\n");
             return EXIT_FAILURE;
         }
 
-        printf("å¯†ç éªŒè¯æˆåŠŸï¼Œæ­£åœ¨æŸ¥è¯¢æ—¥è®°...\n");
+        printf("ÃÜÂëÑéÖ¤³É¹¦£¬ÕıÔÚ²éÑ¯ÈÕ¼Ç...\n");
         return handle_view_command(date);
 
-        // æ¨¡å¼ D: æ— æ•ˆå‘½ä»¤æˆ–å¸®åŠ©ä¿¡æ¯
+        // Ä£Ê½ D: ÎŞĞ§ÃüÁî»ò°ïÖúĞÅÏ¢
     } else {
-        fprintf(stderr, "é”™è¯¯ï¼šå‚æ•°æ— æ•ˆæˆ–ç¼ºå¤±ã€‚\n");
-        fprintf(stderr, "ç”¨æ³•:\n");
-        fprintf(stderr, "  1. ç‹¬ç«‹è®¤è¯: %s <å¯†ç >\n", argv[0]);
-        fprintf(stderr, "  2. ä¿å­˜æ—¥è®°: %s save <å¯†ç > \"<å¤©æ°”>\" \"<å†…å®¹>\"\n", argv[0]);
-        fprintf(stderr, "  3. æŸ¥çœ‹æ—¥è®°: %s view <å¯†ç > <YYYY-MM-DD>\n", argv[0]);
+        fprintf(stderr, "´íÎó£º²ÎÊıÎŞĞ§»òÈ±Ê§¡£\n");
+        fprintf(stderr, "ÓÃ·¨:\n");
+        fprintf(stderr, "  1. ¶ÀÁ¢ÈÏÖ¤: %s <ÃÜÂë>\n", argv[0]);
+        fprintf(stderr, "  2. ±£´æÈÕ¼Ç: %s save <ÃÜÂë> \"<ÌìÆø>\" \"<ÄÚÈİ>\"\n", argv[0]);
+        fprintf(stderr, "  3. ²é¿´ÈÕ¼Ç: %s view <ÃÜÂë> <YYYY-MM-DD>\n", argv[0]);
         return EXIT_FAILURE;
     }
 }
 
 /**
- * @brief éªŒè¯ç”¨æˆ·å¯†ç ã€‚
+ * @brief ÑéÖ¤ÓÃ»§ÃÜÂë¡£
  */
 int authenticate_password(const char* password)
 {
   if (strcmp(password, PASSWORD) == 0) {
-      printf("å¯†ç æ­£ç¡®\n");
+      printf("ÃÜÂëÕıÈ·\n");
       return EXIT_SUCCESS;
   }
     else {
-        fprintf(stderr, "é”™è¯¯ï¼šå¯†ç é”™è¯¯ï¼Œè¯·é‡è¯•ã€‚\n");
+        fprintf(stderr, "´íÎó£ºÃÜÂë´íÎó£¬ÇëÖØÊÔ¡£\n");
         return EXIT_FAILURE;
     }
 }
 
 
 static const char* chinese_weekdays[] = {
-    "æ˜ŸæœŸæ—¥", "æ˜ŸæœŸä¸€", "æ˜ŸæœŸäºŒ", "æ˜ŸæœŸä¸‰","æ˜ŸæœŸå››", "æ˜ŸæœŸäº”", "æ˜ŸæœŸå…­"
+    "ĞÇÆÚÈÕ", "ĞÇÆÚÒ»", "ĞÇÆÚ¶ş", "ĞÇÆÚÈı","ĞÇÆÚËÄ", "ĞÇÆÚÎå", "ĞÇÆÚÁù"
 };
 
 /**
- * @brief åˆ›å»ºå¹¶ä¿å­˜ä¸€ç¯‡æ—¥è®°ã€‚
- * ã€æ³¨æ„ã€‘ç”±äºæ—¶é—´è‡ªåŠ¨è·å–ï¼Œåªæ¥æ”¶ç”¨æˆ·è¾“å…¥çš„å¤©æ°”å’Œå†…å®¹ã€‚
+ * @brief ´´½¨²¢±£´æÒ»ÆªÈÕ¼Ç¡£
+ * ¡¾×¢Òâ¡¿ÓÉÓÚÊ±¼ä×Ô¶¯»ñÈ¡£¬Ö»½ÓÊÕÓÃ»§ÊäÈëµÄÌìÆøºÍÄÚÈİ¡£
  */
 int handle_save_command(const char* weather, const char* content) {
-    // åˆå§‹åŒ–ä¸€ä¸ªæ–°çš„æ—¥è®°æ¡ç›®ï¼Œç¡®ä¿æ‰€æœ‰å­—æ®µï¼ˆå°¤å…¶æ˜¯å­—ç¬¦ä¸²ï¼‰å®‰å…¨æ¸…é›¶ã€‚
+    // ³õÊ¼»¯Ò»¸öĞÂµÄÈÕ¼ÇÌõÄ¿£¬È·±£ËùÓĞ×Ö¶Î£¨ÓÈÆäÊÇ×Ö·û´®£©°²È«ÇåÁã¡£
     DiaryEntry_t  new_entry;
     memset(&new_entry, 0,sizeof(DiaryEntry_t));
-    time_t now = time(NULL); //è·å–åŸå§‹æ—¶é—´
-    struct tm local_time_struct = *localtime(&now);//è§£æŒ‡é’ˆ.è½¬æ¢ä¸ºæœ¬åœ°æ—¶é—´
+    time_t now = time(NULL); //»ñÈ¡Ô­Ê¼Ê±¼ä
+    struct tm local_time_struct = *localtime(&now);//½âÖ¸Õë.×ª»»Îª±¾µØÊ±¼ä
     size_t len = strftime(
-            new_entry.date,          // å‚æ•° 1: ç›®æ ‡ç¼“å†²åŒº (char æ•°ç»„)
-            DATE_SIZE,               // å‚æ•° 2: ç›®æ ‡ç¼“å†²åŒºçš„æœ€å¤§å®¹é‡ (11 å­—èŠ‚)
-            "%Y-%m-%d",              // å‚æ•° 3: æ ¼å¼å­—ç¬¦ä¸²
-            &local_time_struct       // å‚æ•° 4: æºæ•°æ® (struct tm ç»“æ„çš„åœ°å€)
+            new_entry.date,          // ²ÎÊı 1: Ä¿±ê»º³åÇø (char Êı×é)
+            DATE_SIZE,               // ²ÎÊı 2: Ä¿±ê»º³åÇøµÄ×î´óÈİÁ¿ (11 ×Ö½Ú)
+            "%Y-%m-%d",              // ²ÎÊı 3: ¸ñÊ½×Ö·û´®
+            &local_time_struct       // ²ÎÊı 4: Ô´Êı¾İ (struct tm ½á¹¹µÄµØÖ·)
         );
     if (len == 0) {
         fprintf(stderr,"Error: Failed to format date into YYYY-MM-DD.\n");
         return EXIT_FAILURE;
     }
 
-    const char* cn_day = chinese_weekdays[local_time_struct.tm_wday];//è½¬æˆæ˜ŸæœŸå‡ 
-    strncpy(new_entry.weekday, cn_day, MAX_WEEKDAY_SIZE - 1);// å…³é”®ä¿®æ­£ï¼šä½¿ç”¨ strncpy å¤åˆ¶æ•´ä¸ªå­—ç¬¦ä¸²
+    const char* cn_day = chinese_weekdays[local_time_struct.tm_wday];//×ª³ÉĞÇÆÚ¼¸
+    strncpy(new_entry.weekday, cn_day, MAX_WEEKDAY_SIZE - 1);// ¹Ø¼üĞŞÕı£ºÊ¹ÓÃ strncpy ¸´ÖÆÕû¸ö×Ö·û´®
 
     strncpy(new_entry.weather,weather,MAX_WEATHER_SIZE - 1);
     strncpy(new_entry.content,content,MAX_CONTENT_SIZE - 1);
+
+
 
     int save_status = write_entry_to_file(&new_entry);
     if ( save_status != EXIT_SUCCESS ) {
         return EXIT_FAILURE;
     }
-    printf("æ—¥è®°ä¿å­˜æˆåŠŸï¼\n");
+    printf("ÈÕ¼Ç±£´æ³É¹¦£¡\n");
     return EXIT_SUCCESS;
 }
 
 /**
- * @brief å°†å•ä¸ªæ—¥è®°æ¡ç›®ä»¥äºŒè¿›åˆ¶å½¢å¼å†™å…¥æ•°æ®æ–‡ä»¶ã€‚
- * * @param entry æŒ‡å‘è¦å†™å…¥æ–‡ä»¶çš„ DiaryEntry_t ç»“æ„ä½“çš„æŒ‡é’ˆã€‚
- * @return int æˆåŠŸè¿”å› EXIT_SUCCESS (0)ï¼Œå¤±è´¥è¿”å› EXIT_FAILURE (1)ã€‚
+ * @brief ½«µ¥¸öÈÕ¼ÇÌõÄ¿ÒÔ¶ş½øÖÆĞÎÊ½Ğ´ÈëÊı¾İÎÄ¼ş¡£
+ * * @param entry Ö¸ÏòÒªĞ´ÈëÎÄ¼şµÄ DiaryEntry_t ½á¹¹ÌåµÄÖ¸Õë¡£
+ * @return int ³É¹¦·µ»Ø EXIT_SUCCESS (0)£¬Ê§°Ü·µ»Ø EXIT_FAILURE (1)¡£
  */
 static int write_entry_to_file(const DiaryEntry_t* entry) {
-    //  æ‰“å¼€æ–‡ä»¶ï¼šä½¿ç”¨ "ab" (è¿½åŠ äºŒè¿›åˆ¶) æ¨¡å¼æ‰“å¼€æ–‡ä»¶ã€‚
+    //  ´ò¿ªÎÄ¼ş£ºÊ¹ÓÃ "ab" (×·¼Ó¶ş½øÖÆ) Ä£Ê½´ò¿ªÎÄ¼ş¡£
     FILE* fp = fopen(DIARY_FILE_PATH, "ab");
-    // æ£€æŸ¥æ–‡ä»¶æ˜¯å¦æ‰“å¼€æˆåŠŸã€‚
+    // ¼ì²éÎÄ¼şÊÇ·ñ´ò¿ª³É¹¦¡£
     if (fp == NULL) {
         fprintf(stderr, "Error: Failed to open file %s\n", DIARY_FILE_PATH);
         return EXIT_FAILURE;
     }
-    //å†™å…¥æ•°æ®ï¼šå°† entry ç»“æ„ä½“çš„å…¨éƒ¨å†…å®¹ä½œä¸ºä¸€ä¸ªå—å†™å…¥æ–‡ä»¶ã€‚
+    //Ğ´ÈëÊı¾İ£º½« entry ½á¹¹ÌåµÄÈ«²¿ÄÚÈİ×÷ÎªÒ»¸ö¿éĞ´ÈëÎÄ¼ş¡£
     size_t items_written = fwrite(
         entry,
         sizeof(DiaryEntry_t),
@@ -161,12 +159,12 @@ static int write_entry_to_file(const DiaryEntry_t* entry) {
         fp);
     if (items_written != 1) {
         fprintf(stderr, "Error: Failed to write to file %s\n", DIARY_FILE_PATH);
-        // åœ¨è¿”å›å¤±è´¥ä¹‹å‰ï¼Œå¿…é¡»å…³é—­æ–‡ä»¶å¥æŸ„ï¼Œé¿å…èµ„æºæ³„éœ²ã€‚
+        // ÔÚ·µ»ØÊ§°ÜÖ®Ç°£¬±ØĞë¹Ø±ÕÎÄ¼ş¾ä±ú£¬±ÜÃâ×ÊÔ´Ğ¹Â¶¡£
         fclose(fp);
         return EXIT_FAILURE;
     }
-    // å…³é—­æ–‡ä»¶å¥æŸ„å¹¶è¿”å›æˆåŠŸã€‚
-    // ç¡®ä¿æ•°æ®ä»ç¼“å†²åŒºå†²åˆ·åˆ°ç¡¬ç›˜ï¼Œå¹¶é‡Šæ”¾èµ„æºã€‚
+    // ¹Ø±ÕÎÄ¼ş¾ä±ú²¢·µ»Ø³É¹¦¡£
+    // È·±£Êı¾İ´Ó»º³åÇø³åË¢µ½Ó²ÅÌ£¬²¢ÊÍ·Å×ÊÔ´¡£
     fclose(fp);
     return EXIT_SUCCESS;
 }
@@ -182,44 +180,44 @@ int handle_view_command(const char* date) {
 
     long file_size = 0;
     size_t entry_count = 0;
-    // --- 1. è®¡ç®—æ–‡ä»¶å¤§å° ---
+    // --- 1. ¼ÆËãÎÄ¼ş´óĞ¡ ---
 
-    // ä»æ–‡ä»¶æœ«å°¾ (SEEK_END) å¼€å§‹ï¼Œç§»åŠ¨ 0 ä¸ªå­—èŠ‚ (offset)ã€‚ fseek(æ–‡ä»¶æŒ‡é’ˆ, åç§»é‡, èµ·å§‹ä½ç½®)
+    // ´ÓÎÄ¼şÄ©Î² (SEEK_END) ¿ªÊ¼£¬ÒÆ¶¯ 0 ¸ö×Ö½Ú (offset)¡£ fseek(ÎÄ¼şÖ¸Õë, Æ«ÒÆÁ¿, ÆğÊ¼Î»ÖÃ)
     fseek(fp, 0, SEEK_END);
-    // è·å–å½“å‰æ–‡ä»¶æŒ‡é’ˆçš„ä½ç½®ï¼Œè¿™ä¸ªä½ç½®å°±æ˜¯æ–‡ä»¶æœ«å°¾ï¼Œå…¶è¿”å›å€¼å°±æ˜¯æ–‡ä»¶çš„æ€»å­—èŠ‚æ•°
+    // »ñÈ¡µ±Ç°ÎÄ¼şÖ¸ÕëµÄÎ»ÖÃ£¬Õâ¸öÎ»ÖÃ¾ÍÊÇÎÄ¼şÄ©Î²£¬Æä·µ»ØÖµ¾ÍÊÇÎÄ¼şµÄ×Ü×Ö½ÚÊı
     file_size = ftell(fp);
     if (file_size == 0) {
         fprintf(stderr, "Error: Failed to get size of file %s\n", DIARY_FILE_PATH);
         fclose(fp);
         return EXIT_FAILURE;
     }
-    // å°†æ–‡ä»¶æŒ‡é’ˆç§»å›æ–‡ä»¶å¼€å¤´ï¼Œå‡†å¤‡å¼€å§‹è¯»å–æ•°æ®
+    // ½«ÎÄ¼şÖ¸ÕëÒÆ»ØÎÄ¼ş¿ªÍ·£¬×¼±¸¿ªÊ¼¶ÁÈ¡Êı¾İ
     rewind(fp);
 
     entry_count = file_size / sizeof(DiaryEntry_t);
-    // --- 3. æ£€æŸ¥æ–‡ä»¶å®Œæ•´æ€§ï¼ˆé‡è¦ï¼ï¼‰---
-    // å¦‚æœæ–‡ä»¶æ€»å¤§å°ä¸æ˜¯ç»“æ„ä½“å¤§å°çš„æ•´æ•°å€ï¼Œè¯´æ˜æ–‡ä»¶æŸå
+    // --- 3. ¼ì²éÎÄ¼şÍêÕûĞÔ£¨ÖØÒª£¡£©---
+    // Èç¹ûÎÄ¼ş×Ü´óĞ¡²»ÊÇ½á¹¹Ìå´óĞ¡µÄÕûÊı±¶£¬ËµÃ÷ÎÄ¼şËğ»µ
     if (file_size % sizeof(DiaryEntry_t) != 0) {
-        fprintf(stderr, "é”™è¯¯ï¼šæ•°æ®æ–‡ä»¶ %s å¯èƒ½å·²æŸåï¼Œæ–‡ä»¶å¤§å°ä¸å®Œæ•´ã€‚\n", DIARY_FILE_PATH);
+        fprintf(stderr, "´íÎó£ºÊı¾İÎÄ¼ş %s ¿ÉÄÜÒÑËğ»µ£¬ÎÄ¼ş´óĞ¡²»ÍêÕû¡£\n", DIARY_FILE_PATH);
         fclose(fp);
         return EXIT_FAILURE;
     }
-    // åŠ¨æ€åˆ†é…å†…å­˜
-    // å£°æ˜ä¸€ä¸ªæŒ‡é’ˆï¼Œç”¨äºæ¥æ”¶åˆ†é…çš„å†…å­˜åœ°å€
+    // ¶¯Ì¬·ÖÅäÄÚ´æ
+    // ÉùÃ÷Ò»¸öÖ¸Õë£¬ÓÃÓÚ½ÓÊÕ·ÖÅäµÄÄÚ´æµØÖ·
     DiaryEntry_t* all_entries = NULL;
-    // è®¡ç®—æ‰€éœ€çš„æ€»å­—èŠ‚æ•°ï¼šæ¡ç›®æ•°é‡ * å•ä¸ªç»“æ„ä½“å¤§å°
+    // ¼ÆËãËùĞèµÄ×Ü×Ö½ÚÊı£ºÌõÄ¿ÊıÁ¿ * µ¥¸ö½á¹¹Ìå´óĞ¡
     all_entries = (DiaryEntry_t*) malloc(entry_count * sizeof(DiaryEntry_t));
     if (all_entries == NULL) {
         fprintf(stderr, "Error: Failed to allocate memory for all entries.\n");
         fclose(fp);
         return EXIT_FAILURE;
     }
-    // è¯»å–æ‰€æœ‰æ—¥è®°
-    // å£°æ˜ä¸€ä¸ªå˜é‡ï¼Œç”¨äºæ¥æ”¶å®é™…è¯»å–åˆ°çš„æ¡ç›®æ•°é‡
+    // ¶ÁÈ¡ËùÓĞÈÕ¼Ç
+    // ÉùÃ÷Ò»¸ö±äÁ¿£¬ÓÃÓÚ½ÓÊÕÊµ¼Ê¶ÁÈ¡µ½µÄÌõÄ¿ÊıÁ¿
     size_t items_read = 0;
     /*
-    ä»æ–‡ä»¶æµ fp çš„å½“å‰ä½ç½®å¼€å§‹ï¼Œå°è¯•è¯»å– entry_count ä¸ªå¤§å°ä¸º sizeof(DiaryEntry_t) çš„æ•°æ®å—ï¼Œ
-    å¹¶å°†è¿™äº›æ•°æ®å—æŒ‰é¡ºåºå­˜å…¥å†…å­˜åœ°å€ all_entries å¼€å§‹çš„åŒºåŸŸã€‚æœ€åï¼Œå°†å®é™…æˆåŠŸè¯»å–çš„å®Œæ•´æ•°æ®å—çš„æ•°é‡è¿”å›ç»™æˆ‘ï¼Œå­˜å…¥ items_read å˜é‡ã€‚
+    ´ÓÎÄ¼şÁ÷ fp µÄµ±Ç°Î»ÖÃ¿ªÊ¼£¬³¢ÊÔ¶ÁÈ¡ entry_count ¸ö´óĞ¡Îª sizeof(DiaryEntry_t) µÄÊı¾İ¿é£¬
+    ²¢½«ÕâĞ©Êı¾İ¿é°´Ë³Ğò´æÈëÄÚ´æµØÖ· all_entries ¿ªÊ¼µÄÇøÓò¡£×îºó£¬½«Êµ¼Ê³É¹¦¶ÁÈ¡µÄÍêÕûÊı¾İ¿éµÄÊıÁ¿·µ»Ø¸øÎÒ£¬´æÈë items_read ±äÁ¿¡£
     */
     items_read = fread(
         all_entries,
@@ -227,14 +225,14 @@ int handle_view_command(const char* date) {
         entry_count,
         fp);
     fclose(fp);
-    // æ£€æŸ¥è¯»å–æ˜¯å¦å®Œæ•´
+    // ¼ì²é¶ÁÈ¡ÊÇ·ñÍêÕû
     if (items_read != entry_count) {
-        fprintf(stderr, "é”™è¯¯ï¼šè¯»å–æ—¥è®°æ•°æ®å¤±è´¥ï¼Œåªè¯»å–äº† %zu/%zu ä¸ªæ¡ç›®ã€‚\n", items_read, entry_count);
+        fprintf(stderr, "´íÎó£º¶ÁÈ¡ÈÕ¼ÇÊı¾İÊ§°Ü£¬Ö»¶ÁÈ¡ÁË %zu/%zu ¸öÌõÄ¿¡£\n", items_read, entry_count);
         free(all_entries);
         return EXIT_FAILURE;
     }
 
-    int found = 0;//æŸ¥æ‰¾æ ‡è®°
+    int found = 0;//²éÕÒ±ê¼Ç
     for (size_t i =0; i<entry_count; i++) {
         if (strcmp(all_entries[i].date,date) == 0) {
             output_entry_to_stdout(&all_entries[i]);
@@ -244,7 +242,7 @@ int handle_view_command(const char* date) {
     }
     free(all_entries);
     if (!found) {
-        fprintf(stderr, "æœªæ‰¾åˆ°æ—¥æœŸ %s çš„æ—¥è®°æ¡ç›®ã€‚\n", date);
+        fprintf(stderr, "Î´ÕÒµ½ÈÕÆÚ %s µÄÈÕ¼ÇÌõÄ¿¡£\n", date);
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
@@ -252,14 +250,14 @@ int handle_view_command(const char* date) {
 }
 
 /**
- * @brief å°†å•ä¸ªæ—¥è®°æ¡ç›®ç»“æ„ä½“ä»¥ç¾è§‚çš„æ ¼å¼è¾“å‡ºåˆ°æ ‡å‡†è¾“å‡ºæµã€‚
+ * @brief ½«µ¥¸öÈÕ¼ÇÌõÄ¿½á¹¹ÌåÒÔÃÀ¹ÛµÄ¸ñÊ½Êä³öµ½±ê×¼Êä³öÁ÷¡£
  */
 static void output_entry_to_stdout(const DiaryEntry_t* entry) {
     printf("========================================\n");
-    printf("æ—¥æœŸ: %s %s\n", entry->date, entry->weekday);
-    printf("å¤©æ°”: %s\n", entry->weather);
+    printf("ÈÕÆÚ: %s %s\n", entry->date, entry->weekday);
+    printf("ÌìÆø: %s\n", entry->weather);
     printf("----------------------------------------\n");
-    printf("æ—¥è®°å†…å®¹:\n");
+    printf("ÈÕ¼ÇÄÚÈİ:\n");
     printf("%s\n", entry->content);
     printf("========================================\n");
 }

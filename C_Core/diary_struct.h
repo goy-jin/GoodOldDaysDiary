@@ -13,10 +13,11 @@
 /** 日记内容的最大长度 (字节)。 */
 #define MAX_CONTENT_SIZE 4096
 
+// 优化日记结构体字段大小为 16 的倍数以适配内存对齐
 /** 日记日期的长度：格式 YYYY-MM-DD + 终止符 '\0' = 11 字节。 */
-#define DATE_SIZE 11
+#define DATE_SIZE 16
 
-#define MAX_WEEKDAY_SIZE 10
+#define MAX_WEEKDAY_SIZE 16
 #define MAX_WEATHER_SIZE 32
 
 /** 存储图片路径的最大长度 (保留未来扩展用)。 */

@@ -233,17 +233,36 @@ int handle_view_command(const char* date) {
     }
 
     int found = 0;//查找标记
+    int record_count = 0; // 用于给同一天的记录编号
+    int first_record_printed = 0; // 记录日期/星期是否已打印
     for (size_t i =0; i<entry_count; i++) {
         if (strcmp(all_entries[i].date,date) == 0) {
+            if (first_record_printed == 0) {
+                printf("日期：%s %s\n",all_entries[i].date, all_entries[i].weekday);
+                first_record_printed = 1;
+            }
+            record_count++;//计数，用于输出分隔符
+            // 打印分隔符，区分同一天的不同记录
+            if (record_count > 1) {
+                printf("--- 记录 %d 的内容 ---\n", record_count);
+            }
+            else {
+                // 如果是第一条，可以不打印额外的分隔线，使用默认的格式
+            }
+
             output_entry_to_stdout(&all_entries[i]);
             found = 1;
-            break;
         }
     }
     free(all_entries);
     if (!found) {
         fprintf(stderr, "未找到日期 %s 的日记条目。\n", date);
         return EXIT_FAILURE;
+    }
+
+    // 增加一个总结性的分隔符，使输出更美观
+    if (record_count>1) {
+        printf("========================================\n");
     }
     return EXIT_SUCCESS;
 
@@ -253,10 +272,7 @@ int handle_view_command(const char* date) {
  * @brief 将单个日记条目结构体以美观的格式输出到标准输出流。
  */
 static void output_entry_to_stdout(const DiaryEntry_t* entry) {
-    printf("========================================\n");
-    printf("日期: %s %s\n", entry->date, entry->weekday);
     printf("天气: %s\n", entry->weather);
-    printf("----------------------------------------\n");
     printf("日记内容:\n");
     printf("%s\n", entry->content);
     printf("========================================\n");

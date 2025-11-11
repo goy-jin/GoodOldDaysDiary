@@ -1,8 +1,4 @@
-好的，这是使用标准 Markdown 格式编写的 `README.md` 文件。
 
-你可以直接复制粘贴到你的项目中。
-
------
 
 # 📖 Good Old Days Diary Manager
 
